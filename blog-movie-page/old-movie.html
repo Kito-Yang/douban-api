@@ -8,37 +8,18 @@
       </circle>
     </svg>
   </div>
-  <div id="year-tabs" style="display: flex; justify-content: flex-start; padding: 10px 0; position: sticky; top: 0; z-index: 100; overflow-x: auto; white-space: nowrap; scrollbar-width: none; -ms-overflow-style: none;">
-  </div>
   <div id="app" class="movie-list" style="max-width: 800px; margin: 20px auto; display: none;"></div>
 
-  <style>
-    #year-tabs::-webkit-scrollbar {
-      display: none;
-    }
-
-    @media (max-width: 768px) {
-      #year-tabs {
-        width: 100%;
-        padding: 10px 0;
-      }
-      #year-tabs div {
-        font-size: 15px;
-        padding: 0 15px;
-      }
-    }
-  </style>
-
   <script>
-    async function fetchMovies() {
+    document.addEventListener('DOMContentLoaded', async () => {
       const app = document.getElementById('app');
       const loadingElement = document.getElementById('loading');
-      const yearTabs = document.getElementById('year-tabs');
+      const highlightElement = document.querySelector('.enable-highlight');
       const movies = [];
       let isMobile = window.innerWidth < 768;
 
       const updateCardStyles = () => {
-        const isDarkMode = document.body.classList.contains('theme-dark');
+        const isDarkMode = document.body.classList.contains('dark-mode');
         const cards = document.querySelectorAll('.movie-card');
         cards.forEach(card => {
           card.style.backgroundColor = isDarkMode ? '#333' : '#fff';
@@ -67,22 +48,28 @@
         });
       };
 
-      const setInitialStyles = () => {
-        const isDarkMode = document.body.classList.contains('theme-dark');
-        document.body.style.backgroundColor = isDarkMode ? '#121212' : '#f9f9f9';
+      const toggleDarkMode = () => {
+        if (highlightElement.getAttribute('data-color') === 'dark-color') {
+          document.body.style.backgroundColor = '#121212';
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.style.backgroundColor = '#f9f9f9';
+          document.body.classList.remove('dark-mode');
+        }
         updateCardStyles();
       };
 
-      setInitialStyles();
+      toggleDarkMode();
 
       const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-            setInitialStyles();
+          if (mutation.type === 'attributes' && mutation.attributeName === 'data-color') {
+            toggleDarkMode();
           }
         }
       });
-      observer.observe(document.body, { attributes: true });
+
+      observer.observe(highlightElement, { attributes: true });
 
       const openMovieDetail = (url) => {
         if (url && url !== '#') {
@@ -123,9 +110,10 @@
       window.addEventListener('resize', checkIsMobile);
 
       try {
-        let response = await fetch('https://api.allorigins.win/get?url=https://movie.douban.com/people/178287633/collect');
-        response = await response.json();
-        htmlContent = response.contents;
+        const response = await fetch('https://api.allorigins.win/get?url=https://movie.douban.com/people/178287633/collect');
+        const data = await response.json();
+        const htmlContent = data.contents;
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
         const items = doc.querySelectorAll('.comment-item');
@@ -144,7 +132,7 @@
 
           const movieInfo = extractMovieInfo(intro);
 
-          const proxiedCover = cover ? `https://images.weserv.nl/?url=${cover}` : '';
+          const proxiedCover = cover ? `https://images.weserv.nl/?url=${encodeURIComponent(cover)}` : '';
 
           movies.push({
             title,
@@ -158,9 +146,7 @@
           });
         });
 
-        const years = [...new Set(movies.map(movie => movie.commentDate.substring(0, 4)))].sort((a, b) => b - a);
-        renderYearTabs(years);
-        renderMovies(movies);
+        renderMovies();
       } catch (error) {
         console.error('Error fetching movies:', error);
       } finally {
@@ -168,76 +154,9 @@
         app.style.display = 'block';
       }
 
-      function renderYearTabs(years) {
-        yearTabs.innerHTML = '';
-
-        const allTab = document.createElement('div');
-        allTab.textContent = '全部';
-        allTab.style.padding = '0 15px';
-        allTab.style.cursor = 'pointer';
-        allTab.style.margin = '0 5px';
-        allTab.style.borderRadius = '4px';
-        allTab.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-        allTab.style.color = '#666';
-        allTab.style.fontWeight = 'normal';
-        allTab.style.fontSize = '15px';
-        allTab.style.height = '23px';
-        allTab.style.lineHeight = '23px';
-
-        allTab.addEventListener('click', () => {
-          document.querySelectorAll('#year-tabs div').forEach(t => {
-            t.style.backgroundColor = '';
-            t.style.color = '#666';
-            t.style.fontWeight = 'normal';
-            t.style.height = '30px';
-            t.style.lineHeight = '30px';
-          });
-          allTab.style.backgroundColor = '#3377AA';
-          allTab.style.color = '#fff';
-          allTab.style.fontWeight = 'bold';
-
-          renderMovies(movies);
-        });
-
-        yearTabs.appendChild(allTab);
-
-        years.forEach(year => {
-          const tab = document.createElement('div');
-          tab.textContent = year;
-          tab.style.padding = '0 15px';
-          tab.style.cursor = 'pointer';
-          tab.style.margin = '0 5px';
-          tab.style.borderRadius = '4px';
-          tab.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-          tab.style.color = '#666';
-          tab.style.fontWeight = 'normal';
-          tab.style.fontSize = '15px';
-          tab.style.height = '23px';
-          tab.style.lineHeight = '23px';
-
-          tab.addEventListener('click', () => {
-            document.querySelectorAll('#year-tabs div').forEach(t => {
-              t.style.backgroundColor = '';
-              t.style.color = '#666';
-              t.style.fontWeight = 'normal';
-            });
-            tab.style.backgroundColor = '#3377AA';
-            tab.style.color = '#fff';
-            tab.style.fontWeight = 'bold';
-
-            const filteredMovies = movies.filter(movie => movie.commentDate.startsWith(year));
-            renderMovies(filteredMovies);
-          });
-
-          yearTabs.appendChild(tab);
-        });
-
-        allTab.click();
-      }
-
-      function renderMovies(moviesToRender) {
+      function renderMovies() {
         app.innerHTML = '';
-        moviesToRender.forEach(movie => {
+        movies.forEach(movie => {
           const movieCard = document.createElement('div');
           movieCard.classList.add('movie-card');
           movieCard.style.display = 'flex';
@@ -247,21 +166,23 @@
           movieCard.style.overflow = 'hidden';
           movieCard.style.width = '100%';
           movieCard.style.transition = 'background-color 0.3s ease';
-          movieCard.style.backgroundColor = document.body.classList.contains('theme-dark') ? '#333' : '#fff';
+          movieCard.style.backgroundColor = document.body.classList.contains('dark-mode') ? '#333' : '#fff';
 
           const movieCoverWrapper = document.createElement('div');
           movieCoverWrapper.classList.add('movie-cover-wrapper');
           movieCoverWrapper.style.width = isMobile ? '25%' : '18%';
+          movieCoverWrapper.style.height = isMobile ? '150px' : '200px';
           movieCoverWrapper.style.display = 'flex';
+          movieCoverWrapper.style.backgroundColor = '#f0f0f0';
+          movieCoverWrapper.style.transition = 'background-color 0.3s ease';
           movieCoverWrapper.onclick = () => openMovieDetail(movie.detailUrl);
 
           const movieCover = document.createElement('img');
           movieCover.src = movie.cover;
           movieCover.alt = movie.title;
           movieCover.classList.add('movie-cover');
-          movieCover.style.margin = '0';
           movieCover.style.width = '100%';
-          movieCover.style.height = isMobile ? '150px' : '200px';
+          movieCover.style.height = '100%';
           movieCover.style.objectFit = 'cover';
           movieCover.style.borderRadius = '4px';
 
@@ -271,7 +192,7 @@
           const movieInfoDiv = document.createElement('div');
           movieInfoDiv.classList.add('movie-info');
           movieInfoDiv.style.flex = '1';
-          movieInfoDiv.style.padding = '0 0 0 10px';
+          movieInfoDiv.style.padding = '0 0 10px 10px';
           movieInfoDiv.style.display = 'flex';
           movieInfoDiv.style.flexDirection = 'column';
           movieInfoDiv.style.justifyContent = 'space-between';
@@ -282,10 +203,10 @@
           movieTitle.style.marginBottom = '10px';
           movieTitle.style.padding = '5px';
           movieTitle.style.fontSize = '15px';
-          movieTitle.style.color = document.body.classList.contains('theme-dark') ? '#fff' : '#3377AA';
+          movieTitle.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#3377AA';
           movieTitle.style.borderRadius = '4px';
           movieTitle.style.textAlign = 'start';
-          movieTitle.style.backgroundColor = document.body.classList.contains('theme-dark') ? '#444' : '#F2F4F6';
+          movieTitle.style.backgroundColor = document.body.classList.contains('dark-mode') ? '#444' : '#F2F4F6';
           movieTitle.style.transition = 'background-color 0.15s ease, color 0.15s ease';
 
           const movieTitleSpan = document.createElement('span');
@@ -294,14 +215,14 @@
           movieTitleSpan.style.transition = 'background-color 0.15s ease, color 0.15s ease';
 
           movieTitleSpan.addEventListener('mouseenter', () => {
-            if (!document.body.classList.contains('theme-dark')) {
+            if (!document.body.classList.contains('dark-mode')) {
               movieTitleSpan.style.backgroundColor = '#3377AA';
               movieTitleSpan.style.color = '#fff';
             }
           });
 
           movieTitleSpan.addEventListener('mouseleave', () => {
-            if (!document.body.classList.contains('theme-dark')) {
+            if (!document.body.classList.contains('dark-mode')) {
               movieTitleSpan.style.backgroundColor = '#F2F4F6';
               movieTitleSpan.style.color = '#3377AA';
             }
@@ -316,7 +237,7 @@
             movieInfoText.classList.add('movie-info-text');
             movieInfoText.style.margin = '0 0 6px';
             movieInfoText.style.fontSize = isMobile ? '12px' : '13px';
-            movieInfoText.style.color = document.body.classList.contains('theme-dark') ? '#fff' : '#666';
+            movieInfoText.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#666';
             movieInfoText.style.textAlign = 'start';
             movieInfoText.style.transition = 'color 0.3s ease';
             movieInfoText.textContent = isMobile ? extractMovieInfo(movie.movieInfo, true) : movie.movieInfo;
@@ -327,7 +248,7 @@
           movieRating.classList.add('movie-rating');
           movieRating.style.margin = '0 0 6px';
           movieRating.style.fontSize = '15px';
-          movieRating.style.color = document.body.classList.contains('theme-dark') ? '#fff' : '#666';
+          movieRating.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#666';
           movieRating.style.textAlign = 'start';
           movieRating.style.display = 'flex';
           movieRating.style.alignItems = 'center';
@@ -354,7 +275,7 @@
             const ratingDate = document.createElement('span');
             ratingDate.classList.add('rating-date');
             ratingDate.style.fontSize = '13px';
-            ratingDate.style.color = document.body.classList.contains('theme-dark') ? '#fff' : '#666';
+            ratingDate.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#666';
             ratingDate.style.transition = 'color 0.3s ease';
             ratingDate.textContent = movie.commentDate;
             movieRating.appendChild(ratingDate);
@@ -366,15 +287,13 @@
           movieComment.classList.add('movie-comment');
           movieComment.style.margin = '0 10px 0 0';
           movieComment.style.fontSize = isMobile ? '13px' : '15px';
-          movieComment.style.color = document.body.classList.contains('theme-dark') ? '#fff' : '#444';
+          movieComment.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#444';
           movieComment.style.lineHeight = isMobile ? '1.5' : '1';
           movieComment.style.textAlign = 'start';
           movieComment.style.borderLeft = '#4870AC solid 2px';
-          movieComment.style.backgroundColor = document.body.classList.contains('theme-dark') ? '#444' : '#F5F8FE';
+          movieComment.style.backgroundColor = document.body.classList.contains('dark-mode') ? '#444' : '#F5F8FE';
           movieComment.style.padding = '10px';
           movieComment.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-          movieComment.style.whiteSpace = 'pre-line';
-          movieComment.style.lineHeight = '1.5';
 
           const movieCommentSpan = document.createElement('span');
           movieCommentSpan.textContent = movie.comment;
@@ -386,10 +305,6 @@
           app.appendChild(movieCard);
         });
       }
-
-      renderMovies(movies);
-    }
-
-    fetchMovies();
+    });
   </script>
 </body>
