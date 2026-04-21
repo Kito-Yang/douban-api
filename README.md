@@ -2,7 +2,7 @@
 
 ## 作者 2026.4.21 补
 
-因最近较忙，此项目暂时停更（预计 6 月恢复更新），如需获取最新页面（[📽️ 影单 - Kito's Blog](https://blog.yangzirui.cn/movie.html)）代码的朋友可发邮件至：kito-yang@foxmail.com，我看见后会将代码回复你（无偿）
+因最近较忙，此项目暂时停更（预计 6 月恢复更新），如需获取最新页面（[📽️ 影单 - Kito's Blog](https://blog.yangzirui.cn/movie.html)）代码的朋友可发邮件至：7596833@qq.com，我看见后会将代码回复你（无偿）
 
 ## 前言
 
